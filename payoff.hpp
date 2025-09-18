@@ -12,6 +12,8 @@ class PayOff {
         PayOff() {}
         virtual ~PayOff() {}
         virtual double operator()(double spot ) const = 0 ; // pure virtual func
+        virtual PayOff* clone() const = 0;
+
 
 };
 
@@ -28,6 +30,10 @@ class PayOffCall : public PayOff {
         virtual double operator()(double spot) const override {
             return std:: max(spot - strike , 0.0);
         }
+
+        virtual PayOff* clone() const override {
+            return new PayOffCall(*this);
+        }
 };
 
 
@@ -42,6 +48,9 @@ class PayOffPut : public PayOff {
         virtual ~PayOffPut() {}
         virtual double operator()(double spot) const override {
             return std::max(strike - spot , 0.0);
+        }
+        virtual PayOff* clone() const override {
+            return new PayOffPut(*this);
         }
 };
 
