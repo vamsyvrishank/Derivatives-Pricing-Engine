@@ -2,24 +2,29 @@
 #include <iostream>
 #include "payoff.hpp"
 #include  "VanillaOption.hpp"
+#include "Instrument.hpp"
+#include "MarketData.hpp"
+#include <cmath>
+
 
 using namespace std;
 
-int main(){
+#include <iostream>
+#include "PricingEngine.hpp"
 
-    PayOffCall payoffcall(100.0);
-    PayOffPut payoffput(100.0);
+int main() {
+    MarketData mkt(105.0, 0.05, 0.2, 0.0);
 
-    VanillaOption vanillacall(payoffcall , 1.0); // expiry = 1 year
-    VanillaOption vanillaput(payoffput , 1.0) ;
+    PayOffCall call(100.0);
+    PayOffPut put(100.0);
 
-    double Spot = 105.0;
+    EuropeanOption callOpt(call, 1.0);
+    EuropeanOption putOpt(put, 1.0);
 
-    cout<<"Call payoff is : "<< vanillacall.OptionPayOff(Spot)<<endl;
-    cout<<"Put payoff is  : "<< vanillaput.OptionPayOff(Spot)<<endl;
+    const BlackScholesAnalyticEngine engine;
 
-
+    std::cout << "European Call Price: " << engine.calculate(callOpt, mkt) << std::endl;
+    std::cout << "European Put Price : " << engine.calculate(putOpt, mkt) << std::endl;
 
     return 0;
-    
 }

@@ -34,6 +34,7 @@ class PayOffCall : public PayOff {
         virtual PayOff* clone() const override {
             return new PayOffCall(*this);
         }
+        double getStrike() const {return strike;}
 };
 
 
@@ -52,6 +53,7 @@ class PayOffPut : public PayOff {
         virtual PayOff* clone() const override {
             return new PayOffPut(*this);
         }
+    double getStrike() const { return strike; }
 };
 
 #endif
