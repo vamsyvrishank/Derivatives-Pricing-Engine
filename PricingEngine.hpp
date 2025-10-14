@@ -3,7 +3,14 @@
 
 #include "Instrument.hpp"
 #include "MarketData.hpp"
+#include "Instrument.hpp"
+#include "MarketData.hpp"
+#include "StochasticProcess.hpp"
 #include <cmath>
+#include <random>
+
+
+using namespace std;
 
 inline double norm_cdf(double x) {
     return 0.5 * std::erfc(-x / std::sqrt(2));
@@ -12,12 +19,16 @@ inline double norm_cdf(double x) {
 class PricingEngine {
 public:
     virtual ~PricingEngine() = default;
-    virtual double calculate(const Instrument& inst, const MarketData& mkt) const = 0;
+    virtual double calculate(const Instrument& inst, const MarketData& mkt) = 0;
 };
+
+
 
 class BlackScholesAnalyticEngine : public PricingEngine {
 public:
-    double calculate(const Instrument& inst, const MarketData& mkt) const override {
+    double calculate(const Instrument& inst, const MarketData& mkt) override {
+
+
         double S = mkt.spot;
         double r = mkt.rate;
         double sigma = mkt.vol;
@@ -25,9 +36,11 @@ public:
         double K = inst.getStrike();
         double T = inst.getMaturity();
 
-        double d1 = (std::log(S / K) + (r - q + 0.5 * sigma * sigma) * T) /
-                    (sigma * std::sqrt(T));
-        double d2 = d1 - sigma * std::sqrt(T);
+        double d1 = (log(S / K) + (r - q + 0.5 * sigma * sigma) * T) /
+                    (sigma * sqrt(T));
+        double d2 = d1 - sigma * sqrt(T);
+
+        cout<<"Calling the Black Scholes Pricing Method"<<endl;
 
         if (inst.isCall())
             return S * std::exp(-q * T) * norm_cdf(d1) -
@@ -36,6 +49,72 @@ public:
             return K * std::exp(-r * T) * norm_cdf(-d2) -
                    S * std::exp(-q * T) * norm_cdf(-d1);
     }
+};
+
+class MonteCarloEngine : public PricingEngine {
+    private:
+        const StochasticProcess &process;
+        int  nPaths_;
+        int  nSteps_;
+    bool store_paths_;
+
+
+    public:
+
+    vector<vector<double>> paths_;
+    MonteCarloEngine(const StochasticProcess &p , int nPaths , int nSteps , bool store_paths = false) : process(p) {
+        nPaths_ = nPaths;
+        nSteps_ = nSteps;
+        store_paths_ = store_paths;
+        if (store_paths) {
+            paths_.resize(nPaths , vector<double>(nSteps+1));
+        }
+    }
+
+    double calculate(const Instrument& inst, const MarketData& mkt) override {
+
+        double S0 = mkt.spot;
+        double r = mkt.rate;
+        double T = inst.getMaturity();
+
+        double dt = T / nSteps_;
+        double discount = exp(-r*T);
+
+        std::mt19937 rng(random_device{}());
+        normal_distribution<> norm(0.0 , 1.0);
+
+        double payoff_sum = 0.0;
+
+        for (int i =0 ; i < nPaths_; i++) {
+
+            vector<double> path(nSteps_ + 1 );
+            path[0] = S0;
+            double t = 0.0;
+
+            for (int j=1 ; j<=nSteps_;j++) {
+                double z = norm(rng);
+                path[j] = process.evolve(t, path[j-1] , dt , sqrt(dt)*z);
+                t += dt;
+            }
+
+            if (store_paths_) {
+                paths_[i] = path;
+            }
+
+            double payoff = inst.payoff(path);
+            payoff_sum += payoff;
+
+        }
+
+        return discount * (payoff_sum / nPaths_);
+
+    }
+
+    const std::vector<std::vector<double>>& getPaths() const {
+        return paths_;
+    }
+
+
 };
 
 #endif
