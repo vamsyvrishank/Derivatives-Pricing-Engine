@@ -9,8 +9,8 @@
 
 class PayOff { 
     public : 
-        PayOff() {}
-        virtual ~PayOff() {}
+        PayOff() = default;
+        virtual ~PayOff() = default;
         virtual double operator()(double spot ) const = 0 ; // pure virtual func
         virtual PayOff* clone() const = 0;
 
