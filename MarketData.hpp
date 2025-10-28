@@ -5,10 +5,10 @@
 struct MarketData
 {
     /* data */
-    double spot;
-    double rate;
-    double vol;
-    double dividend;
+    double spot{0.0};
+    double rate{0.0};
+    double vol{0.0};
+    double dividend{0.0};
 
 
     //create a default constructor
