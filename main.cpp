@@ -46,5 +46,13 @@ int main() {
 
     cout << "BS Closed form Call Option Price : " << bsAnalyticsCallPrice << endl;
 
+
+    PayOffCall callPayOff(K);
+    AmericanOption amerCall(callPayoff , T);
+
+    BinomialEngine BnEngine(300);
+    double bnPrice = BnEngine.calculate(amerCall , data);
+
+    cout << "Binomial American Option Price : " << bnPrice << endl;
     return 0;
 }

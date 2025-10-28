@@ -56,11 +56,9 @@ class MonteCarloEngine : public PricingEngine {
         const StochasticProcess &process;
         int  nPaths_;
         int  nSteps_;
-    bool store_paths_;
-
+        bool store_paths_;
 
     public:
-
     vector<vector<double>> paths_;
     MonteCarloEngine(const StochasticProcess &p , int nPaths , int nSteps , bool store_paths = false) : process(p) {
         nPaths_ = nPaths;
@@ -115,6 +113,52 @@ class MonteCarloEngine : public PricingEngine {
     }
 
 
+};
+
+class BinomialEngine : public PricingEngine {
+private:
+    int steps;
+
+public:
+    explicit BinomialEngine(int nSteps) : steps(nSteps) {}
+
+    double calculate(const Instrument& inst, const MarketData& data) override {
+        double T = inst.getMaturity();
+        double dt = T / steps;
+        double u = exp(data.vol * sqrt(dt));
+        double d = 1.0 / u;
+        double discountFactor = exp(-data.rate * dt);
+        double p = (exp((data.rate - data.dividend) * dt) - d) / (u - d);
+
+        // Spot prices at maturity
+        vector<double> spotAtMaturity(steps + 1);
+        for (int i = 0; i <= steps; i++) {
+            spotAtMaturity[i] = data.spot * pow(u, steps - i) * pow(d, i);
+        }
+
+        // Option values at maturity
+        vector<double> optionValues(steps + 1);
+        for (int i = 0; i <= steps; i++) {
+            optionValues[i] = inst.payoff(spotAtMaturity[i]);
+        }
+
+        // Backward induction
+        for (int step = steps - 1; step >= 0; step--) {
+            for (int i = 0; i <= step; i++) {
+                double continuation = discountFactor * (p * optionValues[i] + (1 - p) * optionValues[i + 1]);
+
+                if (inst.isAmerican()) {
+                    double spot = data.spot * pow(u, step - i) * pow(d, i);
+                    double exercise = inst.payoff(spot);
+                    optionValues[i] = max(continuation, exercise);
+                } else {
+                    optionValues[i] = continuation;
+                }
+            }
+        }
+
+        return optionValues[0];
+    }
 };
 
 #endif
